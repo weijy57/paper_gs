@@ -21,6 +21,26 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
+\bibitem{cui2024diffusionshieldwatermarkcopyrightprotection}
+\BIBentryALTinterwordspacing
+Y.~Cui, J.~Ren, H.~Xu, P.~He, H.~Liu, L.~Sun, Y.~Xing, and J.~Tang,
+  ``Diffusionshield: A watermark for copyright protection against generative
+  diffusion models,'' 2024. [Online]. Available:
+  \url{https://arxiv.org/abs/2306.04642}
+\BIBentrySTDinterwordspacing
+
+\bibitem{shi2025rlcpreinforcementlearningbasedcopyright}
+\BIBentryALTinterwordspacing
+Z.~Shi, J.~Yan, X.~Tang, L.~Lyu, and B.~Faltings, ``Rlcp: A reinforcement
+  learning-based copyright protection method for text-to-image diffusion
+  model,'' 2025. [Online]. Available: \url{https://arxiv.org/abs/2408.16634}
+\BIBentrySTDinterwordspacing
+
+\bibitem{ma2024dataset}
+R.~Ma, Q.~Zhou, B.~Xiao, D.~Zhou, X.~Li, A.~Singh, Y.~Qu, K.~Keutzer, X.~Xie,
+  J.~Hu \emph{et~al.}, ``A dataset and benchmark for copyright protection from
+  text-to-image diffusion models,'' 2024.
+
 \bibitem{Yang_2024_CVPR}
 Z.~Yang, K.~Zeng, K.~Chen, H.~Fang, W.~Zhang, and N.~Yu, ``Gaussian shading:
   Provable performance-lossless image watermarking for diffusion models,'' in
@@ -39,5 +59,13 @@ G.~Zhang, J.~P. Lewis, and W.~B. Kleijn, ``Exact diffusion inversion via
   bidirectional integration approximation,'' in \emph{European Conference on
   Computer Vision}.\hskip 1em plus 0.5em minus 0.4em\relax Springer, 2024, pp.
   19--36.
+
+\bibitem{WIJMANS19951}
+\BIBentryALTinterwordspacing
+J.~Wijmans and R.~Baker, ``The solution-diffusion model: a review,''
+  \emph{Journal of Membrane Science}, vol. 107, no.~1, pp. 1--21, 1995.
+  [Online]. Available:
+  \url{https://www.sciencedirect.com/science/article/pii/037673889500102I}
+\BIBentrySTDinterwordspacing
 
 \end{thebibliography}

@@ -2,7 +2,7 @@
 \IEEEoverridecommandlockouts
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
 %Template version as of 6/27/2024
-
+\usepackage[hidelinks]{hyperref}
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
@@ -68,11 +68,16 @@ email address or ORCID}
 \section{引言}
 近年来，扩散模型（Diffusion Models）在图像生成、内容创作等领域取得了突破性进展，成为生成式人工智能的重要基础。然而，随着AI生成内容（AIGC）的广泛传播，如何对生成图像进行有效的溯源和版权保护，防止内容滥用与伪造，成为学术界和产业界关注的焦点。图像水印作为数字内容溯源与版权保护的核心技术，面临着鲁棒性、容量、无损性等多重挑战。
 
-现有扩散模型水印方法如Gaussian Shading\cite{Yang_2024_CVPR}等，虽然能够在噪声潜空间嵌入水印，但在逆向提取时往往存在精度损失或计算开销过大的问题。近期，EDICT\cite{panthi2025watermarkingdiffusionmodelgaussian}方法通过耦合潜变量实现了扩散过程的精确反演，但其逆向过程计算量大，效率有限。BDIA\cite{zhang2024exact}方法则提出了一种高效的双向积分近似机制，可在保证精度的同时大幅提升逆向推理效率。
+Yingqian Cui\cite{cui2024diffusionshieldwatermarkcopyrightprotection}等提出DiffusionShield的主动式水印技术，通过在原始图像中嵌入隐形水印并强制扩散模型学习其分布，使生成图像携带可检测的水印证据，从而追溯版权侵权行为；Zhuan Shi\cite{shi2025rlcpreinforcementlearningbasedcopyright}等提出一种基于强化学习的版权保护方法，通过构建符合法律标准的版权评估指标，并利用DDPO框架优化扩散模型的生成策略，在显著降低侵权风险）的同时保持图像生成质量；Rui Ma\cite{ma2024dataset}等提出面向文本到图像扩散模型版权保护的大规模标准化数据集与基准测试，通过协同CLIP、ChatGPT和扩散模型构建包含锚定图像、提示词及生成图像的数据，并提出评估指标框架以推动版权保护研究；Zijin Yang\cite{Yang_2024_CVPR}等提出Gaussian Shading通过将水印映射为与扩散模型隐空间同分布的标准高斯变量实现无损性能，结合DDIM反演和逆采样提取水印，实现版权保护与溯源双重功能
 
-为此，本文提出了一种结合EDICT与BDIA的新型扩散模型水印方法：在前向生成阶段采用EDICT的耦合潜变量机制提升水印嵌入的精确性与鲁棒性，在逆向提取阶段引入BDIA高效积分近似方法，实现高效且精确的水印恢复。该方法兼具精确性与高效性，理论与实验均证明其在水印检测率、可追溯性、鲁棒性和推理效率等方面优于现有扩散水印方法。
+现有扩散模型水印方法如Gaussian Shading等，虽然能够在噪声潜空间嵌入水印，但在逆向提取时往往存在精度损失或计算开销过大的问题。近期，EDICT\cite{panthi2025watermarkingdiffusionmodelgaussian}方法通过耦合潜变量实现了扩散过程的精确反演，但其逆向过程计算量大，效率有限。BDIA\cite{zhang2024exact}方法则提出了一种高效的双向积分近似机制，可在保证精度的同时大幅提升逆向推理效率。
+
+针对上述问题，本文提出了一种结合EDICT与BDIA的新型扩散模型水印方法：在前向生成阶段采用EDICT的耦合潜变量机制提升水印嵌入的精确性与鲁棒性，在逆向提取阶段引入BDIA高效积分近似方法，实现高效且精确的水印恢复。该方法兼具精确性与高效性，理论与实验均证明其在水印检测率、可追溯性、鲁棒性和推理效率等方面优于现有扩散水印方法。
 
 \section{相关工作}
+\subsection{扩散模型简介}
+扩散模型（Diffusion Models）\cite{WIJMANS19951}是一类基于逐步噪声扰动与去噪过程的生成式模型。其基本思想是将原始数据逐步加噪至高斯分布，然后通过学习到的去噪网络反向还原数据。近年来，DDPM、DDIM、Stable Diffusion等模型在图像生成、编辑、跨模态生成等任务中取得了显著成果。扩散模型具备生成质量高、可控性强等优点，已成为AIGC领域的主流技术路线。
+
 \subsection{Gaussian Shading方法}
 Gaussian Shading方法\cite{Yang_2024_CVPR}首次提出在扩散模型的噪声潜空间直接嵌入水印。其基本思想是：设扩散模型的噪声潜变量为$z \in \mathbb{R}^{c \times h \times w}$，水印信息$w$经过加密后被映射为与$z$同形状的扰动$\Delta z$，并与原始噪声叠加：
 \begin{equation}
