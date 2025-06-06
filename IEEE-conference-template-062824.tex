@@ -73,48 +73,84 @@ email address or ORCID}
 为此，本文提出了一种结合EDICT与BDIA的新型扩散模型水印方法：在前向生成阶段采用EDICT的耦合潜变量机制提升水印嵌入的精确性与鲁棒性，在逆向提取阶段引入BDIA高效积分近似方法，实现高效且精确的水印恢复。该方法兼具精确性与高效性，理论与实验均证明其在水印检测率、可追溯性、鲁棒性和推理效率等方面优于现有扩散水印方法。
 
 \section{相关工作}
-近年来，针对AIGC内容的溯源与版权保护，学术界提出了多种图像水印方法。传统水印方法主要包括基于空域和频域的嵌入方式，如在像素空间或DCT/DFT等频域对图像进行微扰。这些方法在静态图像中具有一定的鲁棒性，但在扩散模型生成流程中，嵌入的水印极易被扩散过程中的噪声破坏，导致检测率和可追溯性大幅下降。
-
-为解决上述问题，部分研究尝试将水印嵌入扩散模型的生成流程中。例如，Gaussian Shading方法\cite{Yang_2024_CVPR}首次提出在扩散模型的噪声潜空间直接嵌入水印。其基本思想是：设扩散模型的噪声潜变量为$z \in \mathbb{R}^{c \times h \times w}$，水印信息$w$经过加密后被映射为与$z$同形状的扰动$\Delta z$，并与原始噪声叠加：
+\subsection{Gaussian Shading方法}
+Gaussian Shading方法\cite{Yang_2024_CVPR}首次提出在扩散模型的噪声潜空间直接嵌入水印。其基本思想是：设扩散模型的噪声潜变量为$z \in \mathbb{R}^{c \times h \times w}$，水印信息$w$经过加密后被映射为与$z$同形状的扰动$\Delta z$，并与原始噪声叠加：
 \begin{equation}
     z' = z + \Delta z(w, K)
 \end{equation}
-其中$K$为密钥。扩散模型在生成图像时以$z'$为输入，理论上可通过逆扩散过程恢复出$\Delta z$，进而提取水印$w$。该方法通过分布保持采样，将水印信息映射到高斯分布的不同区间，实现了高容量水印嵌入。其嵌入容量为$l \times c / f_c \times h / f_{hw} \times w / f_{hw}$，其中$l$为每bit表示的区间数，$f_c, f_{hw}$为通道和空间的分组因子。
+其中$K$为密钥。扩散模型在生成图像时以$z'$为输入，理论上可通过逆扩散过程恢复出$\Delta z$，进而提取水印$w$。该方法通过分布保持采样，将水印信息映射到高斯分布的不同区间，实现了高容量水印嵌入。但其依赖于DDIM等非马尔可夫扩散模型的逆向推理，逆向过程为一阶近似，前向与逆向状态存在不一致性，导致水印恢复精度下降。
 
-然而，Gaussian Shading方法依赖于DDIM等非马尔可夫扩散模型的逆向推理。DDIM逆向过程本质上是对概率流ODE的数值近似，存在如下更新公式：
-\begin{equation}
-    z_{i-1} = a_i z_i + b_i \hat{\epsilon}_\theta(z_i, i)
-\end{equation}
-其中$a_i, b_i$为与噪声调度相关的系数，$\hat{\epsilon}_\theta$为噪声预测网络。由于该过程为一阶近似，前向与逆向状态存在不一致性，导致水印恢复精度下降。
-
-为提升逆向精度，EDICT方法\cite{panthi2025watermarkingdiffusionmodelgaussian}提出引入耦合潜变量$(x, y)$，在每一步交替进行去噪和加噪操作，实现扩散过程的精确可逆。其核心递推为：
+\subsection{EDICT方法}
+EDICT方法\cite{panthi2025watermarkingdiffusionmodelgaussian}提出引入耦合潜变量$(x, y)$，在每一步交替进行去噪和加噪操作，实现扩散过程的精确可逆。其核心递推为：
 \begin{align}
     x_{t-1} &= p \cdot \text{Denoise}(x_t, t, y_t) + (1-p) \cdot \text{Denoise}(y_t, t, x_t) \\
     y_{t-1} &= p \cdot \text{Denoise}(y_t, t, x_{t-1}) + (1-p) \cdot x_{t-1}
 \end{align}
 通过两组潜变量的交替作用，EDICT理论上可实现无损逆向推理，极大提升了水印提取的准确性和鲁棒性。但其每步需两次神经网络推理，计算开销较大。
 
-为进一步提升效率，BDIA方法\cite{zhang2024exact}提出了双向积分近似机制。其思想是：在每一步逆向推理时，既利用当前状态$z_i$的正向DDIM更新，也利用$z_{i+1}$的反向DDIM更新，将两者加权平均，递推公式为：
+\subsection{BDIA方法}
+BDIA方法\cite{zhang2024exact}提出了双向积分近似机制。在每一步逆向推理时，既利用当前状态$z_i$的正向DDIM更新，也利用$z_{i+1}$的反向DDIM更新，将两者加权平均，递推公式为：
 \begin{equation}
     z_{i-1} = z_{i+1} - \Delta(t_i \to t_{i+1}|z_i) + \Delta(t_i \to t_{i-1}|z_i)
 \end{equation}
-其中$\Delta$为DDIM步长的积分近似。该方法无需引入额外潜变量，仅用单变量即可实现精确逆向，且推理效率提升一倍。
-
-综上，现有扩散模型水印方法经历了从传统空频域嵌入，到噪声潜空间嵌入（Gaussian Shading），再到精确可逆（EDICT）与高效积分（BDIA）的发展。本文结合EDICT的前向精确嵌入与BDIA的高效逆向提取，兼顾了精度与效率，推动了扩散模型水印技术的进一步发展。
+其中$\Delta$为DDIM步长的积分近似。该方法无需引入额外潜变量，仅用单变量即可实现精确逆向，推理效率提升一倍，适合大规模高效水印提取。
 
 \section{方法}
-\subsection{EDICT耦合水印嵌入机制}
-在水印嵌入与图像生成阶段，本文采用EDICT（Exact Diffusion Inversion via Coupled Transformations）提出的耦合潜变量机制。具体做法为：首先将待嵌入水印的信息编码进噪声潜变量，并复制一份，形成两组耦合潜变量。随后在扩散去噪过程中，交替对两组潜变量进行去噪操作，使其相互引导、共同收敛，最终生成的图像与水印信息高度耦合。该机制理论上保证了水印嵌入对模型性能无影响，并提升了水印的鲁棒性和可追溯性。
 
-\subsection{BDIA高效逆向水印提取}
-在水印提取阶段，本文创新性地引入BDIA（Bi-directional Integration Approximation）方法，替代EDICT的逆向过程。BDIA通过对每一步扩散状态进行双向积分近似，仅需单变量即可实现精确反演，极大降低了计算开销，同时保证水印恢复的准确性。具体流程为：对生成图像编码得到潜变量后，利用BDIA的正反积分近似方法，逐步逆向还原出初始嵌入水印的噪声潜变量，进而提取出水印信息。
+\subsection{方法概述}
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.95\linewidth,height=0.7\textheight]{./img/fig2.png}
+	\caption{EDICT+BDIA扩散水印整体流程示意图}
+	\label{fig:framework}
+\end{figure}
+为解决扩散模型水印在精度、鲁棒性与推理效率上的矛盾，本文提出一种“前向EDICT+逆向BDIA”融合方案。该方法在水印嵌入阶段利用EDICT的耦合机制实现高精度、高鲁棒性嵌入，在水印提取阶段采用BDIA的高效逆向积分近似，实现单变量高效恢复。整体流程如图\ref{fig:framework}所示。
 
-\subsection{整体流程与优势}
-整体流程如图所示：前向采用EDICT耦合机制，逆向采用BDIA积分近似。该方法兼具EDICT的精确性和BDIA的高效性，理论与实验均证明其在水印检测率、鲁棒性和推理效率方面优于现有扩散水印方法。与传统EDICT全流程相比，本文方法在保持高精度的同时，推理速度提升一倍以上，极大增强了实际应用价值。
+\subsection{水印嵌入流程（EDICT前向）}
+本阶段核心在于将水印信息通过加密映射为噪声扰动，并利用EDICT的双变量耦合机制嵌入扩散过程。具体而言，初始化两组潜变量，其中一组叠加水印扰动，随后在每步扩散中交替利用对方状态进行条件去噪。该机制可有效提升水印与生成内容的耦合度和鲁棒性，避免信息丢失。
+
+\subsection{水印提取流程（BDIA逆向）}
+在提取阶段，首先对生成图像编码获得潜变量，然后采用BDIA的单变量高效逆向递推策略，结合正反向信息，逐步还原初始噪声。最终通过解码操作恢复出嵌入的水印信息。该流程显著降低了推理计算量，并兼顾恢复精度。
+
+\subsection{关键技术与创新点}
+\begin{itemize}
+    \item \textbf{融合创新：} 首次将EDICT的精确耦合机制与BDIA的高效逆向积分结合，兼顾精度与效率。
+    \item \textbf{鲁棒性提升：} 双变量耦合嵌入提升水印抗干扰能力，适应多种攻击场景。
+    \item \textbf{推理高效：} BDIA逆向大幅降低推理计算量，适合实际部署。
+\end{itemize}
+
+\subsection{伪代码描述}
+\begin{algorithmic}[1]
+\REQUIRE 水印信息$w$，密钥$K$，扩散模型参数
+\ENSURE 生成图像$\hat{x}_0$，可提取水印$w$
+\STATE \textbf{嵌入阶段：}
+    \STATE $\Delta z \leftarrow \text{Encode}(w, K)$
+    \STATE 初始化两组潜变量$x_T, y_T$
+    \FOR{每步扩散}
+        \STATE 交替对$x, y$进行条件去噪
+    \ENDFOR
+    \STATE $\hat{x}_0 \leftarrow x_0$
+\STATE \textbf{提取阶段：}
+    \STATE $z_0 \leftarrow \text{Encode}(\hat{x}_0)$
+    \FOR{每步逆向}
+        \STATE 单变量高效递推还原噪声（BDIA策略）
+    \ENDFOR
+    \STATE $w \leftarrow \text{Decode}(z_0, K)$
+\end{algorithmic}
 
 \section{实验设计与结果}
 \subsection{实验设置}
 实验在公开的图像生成数据集（如CIFAR-10、CelebA等）上进行，选用主流扩散模型（如DDPM、Stable Diffusion）作为基线。对比方法包括传统空域水印、频域水印、深度学习水印等。评估指标涵盖水印检测率、可追溯性、鲁棒性（对JPEG压缩、裁剪、加噪等攻击）、容量、对生成质量的影响（FID、IS等）。
+
+\subsection{实验流程}
+本实验流程包括数据准备、模型训练与水印嵌入、攻击与鲁棒性测试、水印提取与评估四个主要阶段：
+\begin{enumerate}
+    \item \textbf{数据准备：} 选用公开数据集（如CIFAR-10、CelebA），对图像进行标准化预处理。
+    \item \textbf{模型训练与水印嵌入：} 以DDPM或Stable Diffusion为基线，按照本文方法在噪声潜空间嵌入加密水印信息，采用EDICT机制生成带水印图像。
+    \item \textbf{攻击与鲁棒性测试：} 对生成图像施加JPEG压缩、裁剪、加噪声等常见攻击，模拟实际应用场景下的干扰。
+    \item \textbf{水印提取与评估：} 利用BDIA逆向积分近似方法从受攻击图像中提取水印，评估检测率、鲁棒性、容量、可追溯性及对生成质量（FID、IS）的影响。
+\end{enumerate}
+每组实验均与主流空域、频域、深度学习水印方法对比，确保结果的全面性和公正性。
 
 \subsection{实验结果}
 实验结果表明，Gaussian Shading及其改进方法在各项指标上均优于对比方法。具体如下：

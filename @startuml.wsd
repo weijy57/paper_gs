@@ -1,0 +1,10 @@
+@startuml
+start
+:嵌入水印的噪声潜变量;
+:EDICT耦合去噪;
+:生成图像;
+:编码得到潜变量;
+:BDIA逆向积分;
+:提取水印;
+stop
+@enduml
